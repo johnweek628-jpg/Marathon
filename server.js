@@ -1,6 +1,9 @@
 const express = require('express');
 const app = express();
 
-app.get('/', (req, res) => res.send('Bot is running'));
+// Health check for Railway / browser
+app.get('/', (req, res) => {
+  res.status(200).send('🤖 Bot is running smoothly');
+});
 
 module.exports = app;
