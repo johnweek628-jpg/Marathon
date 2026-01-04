@@ -27,6 +27,18 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
   const userId = msg.from.id.toString();
   const referrerId = match[1];
 
+  const users = readDB();
+
+  // 🔒 Save referrer temporarily if user is new
+  if (!users[userId]) {
+    users[userId] = {
+      referrals: 0,
+      referrer: referrerId || null,
+      rewarded: false
+    };
+    writeDB(users);
+  }
+
   const joined = await isMember(userId);
 
   if (!joined) {
@@ -37,7 +49,7 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
     );
   }
 
-  proceedAfterJoin(userId, referrerId);
+  proceedAfterJoin(userId);
 });
 
 /* -------------------- CONFIRM BUTTON -------------------- */
@@ -54,66 +66,63 @@ bot.on('callback_query', async (query) => {
     });
   }
 
-  bot.answerCallbackQuery(query.id);
+  await bot.answerCallbackQuery(query.id, { text: "✅ Tasdiqlandi!" });
   proceedAfterJoin(userId);
 });
 
 /* -------------------- MAIN LOGIC -------------------- */
-function proceedAfterJoin(userId, referrerId = null) {
+function proceedAfterJoin(userId) {
   const users = readDB();
-  const isNewUser = !users[userId];
+  const user = users[userId];
 
-  if (isNewUser) {
-    users[userId] = {
-      referrals: 0,
-      referrer: null,
-      rewarded: false
-    };
+  // 🚫 Already processed
+  if (user.processed) return;
 
-    if (
-      referrerId &&
-      referrerId !== userId &&
-      users[referrerId]
-    ) {
-      users[userId].referrer = referrerId;
-      users[referrerId].referrals += 1;
+  user.processed = true;
 
+  const referrerId = user.referrer;
+
+  if (
+    referrerId &&
+    referrerId !== userId &&
+    users[referrerId]
+  ) {
+    users[referrerId].referrals += 1;
+
+    const count = users[referrerId].referrals;
+
+    // 🔔 REFERRAL UPDATE MESSAGE (EVERY TIME)
+    bot.sendMessage(
+      referrerId,
+      `🎉 Yana bir odam referal havolangiz orqali kanalga qo‘shildi!
+👥 Natija: ${count}/4`
+    );
+
+    // 🎁 REWARD
+    if (count >= 4 && !users[referrerId].rewarded) {
+      users[referrerId].rewarded = true;
       bot.sendMessage(
         referrerId,
-        `🎉 Tabriklaymiz! Yangi obunachi qo‘shildi.
-👥 Jami taklif qilinganlar: ${users[referrerId].referrals}/4`
-      );
-
-      if (users[referrerId].referrals >= 4 && !users[referrerId].rewarded) {
-        users[referrerId].rewarded = true;
-        bot.sendMessage(
-          referrerId,
-          `🎁 Tabriklaymiz! Siz 4 ta odamni taklif qildingiz.
+        `🎁 Tabriklaymiz! Siz 4 ta odamni taklif qildingiz.
 🔐 Yopiq kanal havolasi:
 ${PRIVATE_CHANNEL_LINK}`
-        );
-      }
+      );
     }
-
-    writeDB(users);
-
-    bot.sendMessage(
-      userId,
-      `Assalamu alaykum, mana hozir sizning shaxsiy taklif qilish havolangizni beramiz.
-Bu orqali 4 ta tanishingizni kanalga taklif qiling.
-Har bir taklif qilingan obunachingiz sanab boriladi.
-4 ta odam taklif qilganingizdan so‘ng, sizga maxsus yopiq kanalga link beriladi.`
-    );
   }
 
+  writeDB(users);
+
   const referralLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
-  const count = users[userId]?.referrals ?? 0;
+  const myCount = users[userId].referrals;
 
   bot.sendMessage(
     userId,
-    `Shu kanalda 7.5 sohibi Jasurbek Abdullayevdan ishonchli IELTS CDI testlar va tekin jonli darslarni ko‘rishingiz mumkin.
+    `Assalamu alaykum 👋
 
-👥 Siz hozircha ${count}/4 odam taklif qildingiz.
+Bu bot orqali siz 7.5 sohibi Jasurbek Abdullayevdan
+ishonchli IELTS CDI testlar va tekin jonli darslarni olishingiz mumkin.
+
+👥 Siz hozircha ${myCount}/4 odam taklif qildingiz.
 
 🔗 Sizning shaxsiy taklif havolangiz:
 ${referralLink}`
