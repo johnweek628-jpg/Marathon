@@ -10,7 +10,14 @@ const {
 const { readDB, writeDB } = require('./db');
 const { joinChannelKeyboard } = require('./keyboard');
 
-const bot = new TelegramBot(BOT_TOKEN, { polling: true });
+const TelegramBot = require('node-telegram-bot-api');
+const { BOT_TOKEN } = require('./config');
+
+const bot = new TelegramBot(BOT_TOKEN, { polling: false });
+
+bot.deleteWebHook({ drop_pending_updates: true })
+  .then(() => bot.startPolling({ interval: 1000 }))
+  .catch((err) => console.error("Webhook delete/poll start error:", err));
 
 /* -------------------- CHECK MEMBERSHIP -------------------- */
 async function isMember(userId) {
