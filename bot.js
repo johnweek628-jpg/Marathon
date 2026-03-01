@@ -15,30 +15,33 @@ const { joinChannelKeyboard } = require("./keyboard");
 const app = express();
 app.use(express.json());
 
-// 🚀 Create bot WITHOUT polling
 const bot = new TelegramBot(BOT_TOKEN);
 
-// 🔹 Webhook endpoint (Telegram sends updates here)
+// 🔹 Webhook endpoint
 app.post("/webhook", (req, res) => {
   bot.processUpdate(req.body);
   res.sendStatus(200);
 });
 
-// 🔹 Health check route (Railway requires this)
+// 🔹 Health check route
 app.get("/", (req, res) => {
   res.send("Bot is running");
 });
 
 const PORT = process.env.PORT || 3000;
 
+// 🔥 IMPORTANT: Replace this with your PUBLIC Railway domain
+const WEBHOOK_URL = `https://marathon-production-983a.up.railway.app/webhook`;
+
 app.listen(PORT, async () => {
   console.log("Server running on", PORT);
 
   try {
-    // 🔥 IMPORTANT: Replace this with your Railway domain
-    const WEBHOOK_URL = "marathon.railway.internal/webhook";
+    // Always clear old webhook first
+    await bot.deleteWebHook({ drop_pending_updates: true });
 
     await bot.setWebHook(WEBHOOK_URL);
+
     console.log("✅ Webhook set successfully");
   } catch (err) {
     console.error("❌ Webhook error:", err.message);
