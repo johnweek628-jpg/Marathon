@@ -23,25 +23,20 @@ app.post("/webhook", (req, res) => {
   res.sendStatus(200);
 });
 
-// 🔹 Health check route
+// 🔹 Health route
 app.get("/", (req, res) => {
   res.send("Bot is running");
 });
 
 const PORT = process.env.PORT || 3000;
-
-// 🔥 IMPORTANT: Replace this with your PUBLIC Railway domain
 const WEBHOOK_URL = `https://marathon-production-983a.up.railway.app/webhook`;
 
 app.listen(PORT, async () => {
   console.log("Server running on", PORT);
 
   try {
-    // Always clear old webhook first
     await bot.deleteWebHook({ drop_pending_updates: true });
-
     await bot.setWebHook(WEBHOOK_URL);
-
     console.log("✅ Webhook set successfully");
   } catch (err) {
     console.error("❌ Webhook error:", err.message);
@@ -69,7 +64,8 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
     users[userId] = {
       referrals: 0,
       referrer: referrerId || null,
-      rewarded: false
+      rewarded: false,
+      processed: false
     };
     writeDB(users);
   }
@@ -110,35 +106,38 @@ function proceedAfterJoin(userId) {
   const users = readDB();
   const user = users[userId];
 
-  if (user.processed) return;
-  user.processed = true;
+  // ✅ Referral faqat bir marta hisoblanadi
+  if (!user.processed) {
+    user.processed = true;
 
-  const referrerId = user.referrer;
+    const referrerId = user.referrer;
 
-  if (referrerId && referrerId !== userId && users[referrerId]) {
-    users[referrerId].referrals += 1;
-    const count = users[referrerId].referrals;
-
-    bot.sendMessage(
-      referrerId,
-      `🎉 Yana bir odam referal havolangiz orqali kanalga qo‘shildi!
-👥 Natija: ${count}/4`
-    );
-
-    if (count >= 4 && !users[referrerId].rewarded) {
-      users[referrerId].rewarded = true;
+    if (referrerId && referrerId !== userId && users[referrerId]) {
+      users[referrerId].referrals += 1;
+      const count = users[referrerId].referrals;
 
       bot.sendMessage(
         referrerId,
-        `🎁 Tabriklaymiz! Siz 4 ta odamni taklif qildingiz.
+        `🎉 Yana bir odam referal havolangiz orqali kanalga qo‘shildi!
+👥 Natija: ${count}/4`
+      );
+
+      if (count >= 4 && !users[referrerId].rewarded) {
+        users[referrerId].rewarded = true;
+
+        bot.sendMessage(
+          referrerId,
+          `🎁 Tabriklaymiz! Siz 4 ta odamni taklif qildingiz.
 🔐 Yopiq kanal havolasi:
 ${PRIVATE_CHANNEL_LINK}`
-      );
+        );
+      }
     }
+
+    writeDB(users);
   }
 
-  writeDB(users);
-
+  // ✅ Har safar /start yozganda foydalanuvchiga javob beriladi
   const referralLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
   const myCount = users[userId].referrals;
 
