@@ -1,51 +1,55 @@
-const TelegramBot = require('node-telegram-bot-api');
+const express = require("express");
+const TelegramBot = require("node-telegram-bot-api");
+
 const {
   BOT_TOKEN,
   BOT_USERNAME,
   MAIN_CHANNEL_ID,
   MAIN_CHANNEL_LINK,
   PRIVATE_CHANNEL_LINK
-} = require('./config');
+} = require("./config");
 
-const { readDB, writeDB } = require('./db');
-const { joinChannelKeyboard } = require('./keyboard');
+const { readDB, writeDB } = require("./db");
+const { joinChannelKeyboard } = require("./keyboard");
 
-// ✅ Create bot WITHOUT polling first
-const bot = new TelegramBot(BOT_TOKEN, { polling: false });
+const app = express();
+app.use(express.json());
 
-// ✅ Robust start: clears webhook, handles restarts, respects retry_after
-async function startBot() {
+// 🚀 Create bot WITHOUT polling
+const bot = new TelegramBot(BOT_TOKEN);
+
+// 🔹 Webhook endpoint (Telegram sends updates here)
+app.post("/webhook", (req, res) => {
+  bot.processUpdate(req.body);
+  res.sendStatus(200);
+});
+
+// 🔹 Health check route (Railway requires this)
+app.get("/", (req, res) => {
+  res.send("Bot is running");
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, async () => {
+  console.log("Server running on", PORT);
+
   try {
-    // Clean up webhook + pending updates (prevents conflicts after restarts)
-    await bot.deleteWebHook({ drop_pending_updates: true });
+    // 🔥 IMPORTANT: Replace this with your Railway domain
+    const WEBHOOK_URL = "marathon.railway.internal/webhook";
 
-    // If a previous polling session exists, stop it (safe on restarts)
-    try { await bot.stopPolling(); } catch (_) {}
-
-    // Start polling
-    await bot.startPolling({ interval: 1000, autoStart: true });
-
-    console.log("✅ Bot polling started");
+    await bot.setWebHook(WEBHOOK_URL);
+    console.log("✅ Webhook set successfully");
   } catch (err) {
-    const retryAfterSec =
-      err?.response?.body?.parameters?.retry_after;
-
-    const waitMs = retryAfterSec ? (retryAfterSec + 1) * 1000 : 5000;
-
-    console.error("❌ Bot start error:", err?.message || err);
-    console.log(`⏳ Retrying in ${Math.ceil(waitMs / 1000)}s...`);
-
-    setTimeout(startBot, waitMs);
+    console.error("❌ Webhook error:", err.message);
   }
-}
-
-startBot();
+});
 
 /* -------------------- CHECK MEMBERSHIP -------------------- */
 async function isMember(userId) {
   try {
     const member = await bot.getChatMember(MAIN_CHANNEL_ID, userId);
-    return ['member', 'administrator', 'creator'].includes(member.status);
+    return ["member", "administrator", "creator"].includes(member.status);
   } catch {
     return false;
   }
@@ -58,7 +62,6 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
 
   const users = readDB();
 
-  // 🔒 Save referrer temporarily if user is new
   if (!users[userId]) {
     users[userId] = {
       referrals: 0,
@@ -82,8 +85,8 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
 });
 
 /* -------------------- CONFIRM BUTTON -------------------- */
-bot.on('callback_query', async (query) => {
-  if (query.data !== 'check_join') return;
+bot.on("callback_query", async (query) => {
+  if (query.data !== "check_join") return;
 
   const userId = query.from.id.toString();
   const joined = await isMember(userId);
@@ -104,28 +107,24 @@ function proceedAfterJoin(userId) {
   const users = readDB();
   const user = users[userId];
 
-  // 🚫 Already processed
   if (user.processed) return;
-
   user.processed = true;
 
   const referrerId = user.referrer;
 
   if (referrerId && referrerId !== userId && users[referrerId]) {
     users[referrerId].referrals += 1;
-
     const count = users[referrerId].referrals;
 
-    // 🔔 REFERRAL UPDATE MESSAGE (EVERY TIME)
     bot.sendMessage(
       referrerId,
       `🎉 Yana bir odam referal havolangiz orqali kanalga qo‘shildi!
 👥 Natija: ${count}/4`
     );
 
-    // 🎁 REWARD
     if (count >= 4 && !users[referrerId].rewarded) {
       users[referrerId].rewarded = true;
+
       bot.sendMessage(
         referrerId,
         `🎁 Tabriklaymiz! Siz 4 ta odamni taklif qildingiz.
