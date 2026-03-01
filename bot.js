@@ -10,11 +10,10 @@ const {
 const { readDB, writeDB } = require('./db');
 const { joinChannelKeyboard } = require('./keyboard');
 
-const TelegramBot = require('node-telegram-bot-api');
-const { BOT_TOKEN } = require('./config');
-
+// ✅ Create bot WITHOUT polling first
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
+// ✅ Clear webhook, then start polling (prevents 409/429 issues)
 bot.deleteWebHook({ drop_pending_updates: true })
   .then(() => bot.startPolling({ interval: 1000 }))
   .catch((err) => console.error("Webhook delete/poll start error:", err));
@@ -89,11 +88,7 @@ function proceedAfterJoin(userId) {
 
   const referrerId = user.referrer;
 
-  if (
-    referrerId &&
-    referrerId !== userId &&
-    users[referrerId]
-  ) {
+  if (referrerId && referrerId !== userId && users[referrerId]) {
     users[referrerId].referrals += 1;
 
     const count = users[referrerId].referrals;
