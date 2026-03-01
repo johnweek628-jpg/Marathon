@@ -13,10 +13,33 @@ const { joinChannelKeyboard } = require('./keyboard');
 // ✅ Create bot WITHOUT polling first
 const bot = new TelegramBot(BOT_TOKEN, { polling: false });
 
-// ✅ Clear webhook, then start polling (prevents 409/429 issues)
-bot.deleteWebHook({ drop_pending_updates: true })
-  .then(() => bot.startPolling({ interval: 1000 }))
-  .catch((err) => console.error("Webhook delete/poll start error:", err));
+// ✅ Robust start: clears webhook, handles restarts, respects retry_after
+async function startBot() {
+  try {
+    // Clean up webhook + pending updates (prevents conflicts after restarts)
+    await bot.deleteWebHook({ drop_pending_updates: true });
+
+    // If a previous polling session exists, stop it (safe on restarts)
+    try { await bot.stopPolling(); } catch (_) {}
+
+    // Start polling
+    await bot.startPolling({ interval: 1000, autoStart: true });
+
+    console.log("✅ Bot polling started");
+  } catch (err) {
+    const retryAfterSec =
+      err?.response?.body?.parameters?.retry_after;
+
+    const waitMs = retryAfterSec ? (retryAfterSec + 1) * 1000 : 5000;
+
+    console.error("❌ Bot start error:", err?.message || err);
+    console.log(`⏳ Retrying in ${Math.ceil(waitMs / 1000)}s...`);
+
+    setTimeout(startBot, waitMs);
+  }
+}
+
+startBot();
 
 /* -------------------- CHECK MEMBERSHIP -------------------- */
 async function isMember(userId) {
