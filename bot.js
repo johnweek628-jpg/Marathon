@@ -83,22 +83,43 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
   proceedAfterJoin(userId);
 });
 
-/* -------------------- CONFIRM BUTTON -------------------- */
+/* -------------------- BUTTON HANDLERS -------------------- */
 bot.on("callback_query", async (query) => {
-  if (query.data !== "check_join") return;
 
   const userId = query.from.id.toString();
-  const joined = await isMember(userId);
 
-  if (!joined) {
-    return bot.answerCallbackQuery(query.id, {
-      text: "❌ Avval kanalga qo‘shiling",
-      show_alert: true
-    });
+  // 🔹 Kanalni tekshirish
+  if (query.data === "check_join") {
+    const joined = await isMember(userId);
+
+    if (!joined) {
+      return bot.answerCallbackQuery(query.id, {
+        text: "❌ Avval kanalga qo‘shiling",
+        show_alert: true
+      });
+    }
+
+    await bot.answerCallbackQuery(query.id, { text: "✅ Tasdiqlandi!" });
+    return proceedAfterJoin(userId);
   }
 
-  await bot.answerCallbackQuery(query.id, { text: "✅ Tasdiqlandi!" });
-  proceedAfterJoin(userId);
+  // 🔹 5000 so‘m tugmasi
+  if (query.data === "pay_5000") {
+    await bot.answerCallbackQuery(query.id);
+
+    return bot.sendMessage(
+      userId,
+      `💰 Agar 5000 so'm bilan marathonga qo‘shilmoqchi bo‘lsangiz:
+
+💳 Karta: 9860100127333845
+
+📩 To‘lov qilgandan keyin screenshotni:
+👉 @jasurbeksielts ga yuboring
+
+🔐 Sizga bir martalik link beriladi.`
+    );
+  }
+
 });
 
 /* -------------------- MAIN LOGIC -------------------- */
@@ -118,16 +139,16 @@ function proceedAfterJoin(userId) {
 
       bot.sendMessage(
         referrerId,
-        `🎉 Yana bir odam referal havolangiz orqali kanalga qo‘shildi!
-👥 Natija: ${count}/4`
+        `🎉 Yana bir odam sizning havolangiz orqali qo‘shildi!
+👥 Natija: ${count}/3`
       );
 
-      if (count >= 4 && !users[referrerId].rewarded) {
+      if (count >= 3 && !users[referrerId].rewarded) {
         users[referrerId].rewarded = true;
 
         bot.sendMessage(
           referrerId,
-          `🎁 Tabriklaymiz! Siz 4 ta odamni taklif qildingiz.
+          `🎁 Tabriklaymiz! Siz 3 ta odamni taklif qildingiz.
 🔐 Yopiq kanal havolasi:
 ${PRIVATE_CHANNEL_LINK}`
         );
@@ -137,21 +158,37 @@ ${PRIVATE_CHANNEL_LINK}`
     writeDB(users);
   }
 
-  // ✅ Har safar /start yozganda foydalanuvchiga javob beriladi
+  // 🔹 Referral link
   const referralLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
   const myCount = users[userId].referrals;
 
+  // 🔹 MAIN MESSAGE + BUTTON
   bot.sendMessage(
     userId,
-    `Assalamu alaykum 👋
+`🎤 3 KUNLIK SPEAKING MARATHON
 
-Bu bot orqali siz 7.5 sohibi Jasurbek Abdullayevdan
-ishonchli IELTS CDI testlar va tekin jonli darslarni olishingiz mumkin.
+🔥 Qoidalar:
 
-👥 Siz hozircha ${myCount}/4 odam taklif qildingiz.
+1. 3 kun davomida speaking topshiriqlar
+2. Har kuni practice
+3. Kirish uchun:
 
-🔗 Sizning shaxsiy taklif havolangiz:
-${referralLink}`
+👥 3 ta odam taklif qiling:
+${referralLink}
+
+📊 Siz: ${myCount}/3`,
+    {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "💰 5000 so'm bilan qo‘shilaman",
+              callback_data: "pay_5000"
+            }
+          ]
+        ]
+      }
+    }
   );
 }
 
