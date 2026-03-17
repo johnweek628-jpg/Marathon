@@ -59,14 +59,13 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
       referrer: referrerId || null,
       rewarded: false,
       processed: false,
-      joinedBefore: false // 🔥 NEW
+      joinedBefore: false
     };
     writeDB(users);
   }
 
   const joined = await isMember(userId);
 
-  // 🔥 agar user oldindan kanalda bo‘lgan bo‘lsa
   if (joined) {
     users[userId].joinedBefore = true;
     writeDB(users);
@@ -87,7 +86,6 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
 bot.on("callback_query", async (query) => {
   const userId = query.from.id.toString();
 
-  // 🔹 Kanalni tekshirish
   if (query.data === "check_join") {
     const joined = await isMember(userId);
 
@@ -98,10 +96,9 @@ bot.on("callback_query", async (query) => {
       });
     }
 
-    // 🔥 tasdiqlash bosilganda ham oldindan member flag qo‘yamiz
     const users = readDB();
     if (users[userId]) {
-      users[userId].joinedBefore = false; // faqat yangi qo‘shilgan bo‘lsa ishlaydi
+      users[userId].joinedBefore = false;
       writeDB(users);
     }
 
@@ -109,7 +106,6 @@ bot.on("callback_query", async (query) => {
     return proceedAfterJoin(userId);
   }
 
-  // 🔹 5000 so‘m tugmasi
   if (query.data === "pay_5000") {
     await bot.answerCallbackQuery(query.id);
 
@@ -132,7 +128,6 @@ function proceedAfterJoin(userId) {
   const users = readDB();
   const user = users[userId];
 
-  // 🔥 ANTI-CHEAT FIX
   if (!user.processed && !user.joinedBefore) {
     user.processed = true;
 
@@ -165,7 +160,15 @@ ${PRIVATE_CHANNEL_LINK}`
 
   const referralLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
   const myCount = users[userId].referrals;
-  const shareText = encodeURIComponent("🎤 3 kunlik speaking marathonga qo‘shiling!");
+
+  // 🔥 FIXED SHARE TEXT (UNIQUE + FULL TEXT)
+  const shareText = encodeURIComponent(
+`🔥 IELTS speakingdan 7.5 sohibi sizni 3 kunlik SPEAKING marafoniga taklif qilyapti!
+
+🚀 Qo‘shilib oling 👇
+
+${referralLink}`
+  );
 
   bot.sendMessage(
     userId,
@@ -187,7 +190,7 @@ ${referralLink}
           [
             {
               text: "📤 Do‘stlarga ulashish",
-              url: `https://t.me/share/url?url=${referralLink}&text=${shareText}`
+              url: `https://t.me/share/url?text=${shareText}`
             }
           ],
           [
