@@ -194,3 +194,19 @@ ${referralLink}
 }
 
 module.exports = bot;
+reply_markup: {
+  inline_keyboard: [
+    [
+      {
+        text: "📤 Do‘stlarga ulashish",
+        url: `https://t.me/share/url?url=https://t.me/${BOT_USERNAME}?start=${userId}&text=🎤 3 kunlik speaking marathonga qo‘shiling!`
+      }
+    ],
+    [
+      {
+        text: "💰 5000 so'm bilan qo‘shilaman",
+        callback_data: "pay_5000"
+      }
+    ]
+  ]
+}
