@@ -190,7 +190,7 @@ ${referralLink}
           [
             {
               text: "📤 Do‘stlarga ulashish",
-              url: `https://t.me/share/url?text=${shareText}`
+              url: `https://t.me/share/url?url=${referralLink}&text=${shareText}`
             }
           ],
           [
