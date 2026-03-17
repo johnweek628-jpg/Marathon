@@ -165,9 +165,7 @@ ${PRIVATE_CHANNEL_LINK}`
   const shareText = encodeURIComponent(
 `🔥 IELTS speakingdan 7.5 sohibi sizni 3 kunlik SPEAKING marafoniga taklif qilyapti!
 
-🚀 Qo‘shilib oling 👇
-
-${referralLink}`
+🚀 Qo‘shilib oling !`
   );
 
   bot.sendMessage(
@@ -190,7 +188,7 @@ ${referralLink}
           [
             {
               text: "📤 Do‘stlarga ulashish",
-              url: `https://t.me/share/url?text=${shareText}`
+              url: `https://t.me/share/url?url=${referralLink}&text=${shareText}`
             }
           ],
           [
