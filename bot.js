@@ -161,7 +161,7 @@ ${PRIVATE_CHANNEL_LINK}`
   const referralLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
   const myCount = users[userId].referrals;
 
-  // 🔥 FIXED SHARE TEXT (UNIQUE + FULL TEXT)
+  //  FIXED SHARE TEXT (UNIQUE + FULL TEXT)
   const shareText = encodeURIComponent(
 `🔥 IELTS speakingdan 7.5 sohibi sizni 3 kunlik SPEAKING marafoniga taklif qilyapti!
 
@@ -190,7 +190,7 @@ ${referralLink}
           [
             {
               text: "📤 Do‘stlarga ulashish",
-              url: `https://t.me/share/url?url=${referralLink}&text=${shareText}`
+              url: `https://t.me/share/url?text=${shareText}`
             }
           ],
           [
