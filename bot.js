@@ -15,7 +15,9 @@ const { joinChannelKeyboard } = require("./keyboard");
 const app = express();
 app.use(express.json());
 
-const bot = new TelegramBot(BOT_TOKEN);
+const bot = new TelegramBot(BOT_TOKEN, {
+  polling: true
+});
 
 // 🔹 Webhook endpoint
 app.post("/webhook", (req, res) => {
@@ -35,8 +37,7 @@ app.listen(PORT, async () => {
   console.log("Server running on", PORT);
 
   try {
-    await bot.deleteWebHook({ drop_pending_updates: true });
-    await bot.setWebHook(WEBHOOK_URL);
+    
     console.log("✅ Webhook set successfully");
   } catch (err) {
     console.error("❌ Webhook error:", err.message);
