@@ -58,12 +58,19 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
       referrals: 0,
       referrer: referrerId || null,
       rewarded: false,
-      processed: false
+      processed: false,
+      joinedBefore: false // 🔥 NEW
     };
     writeDB(users);
   }
 
   const joined = await isMember(userId);
+
+  // 🔥 agar user oldindan kanalda bo‘lgan bo‘lsa
+  if (joined) {
+    users[userId].joinedBefore = true;
+    writeDB(users);
+  }
 
   if (!joined) {
     return bot.sendMessage(
@@ -89,6 +96,13 @@ bot.on("callback_query", async (query) => {
         text: "❌ Avval kanalga qo‘shiling",
         show_alert: true
       });
+    }
+
+    // 🔥 tasdiqlash bosilganda ham oldindan member flag qo‘yamiz
+    const users = readDB();
+    if (users[userId]) {
+      users[userId].joinedBefore = false; // faqat yangi qo‘shilgan bo‘lsa ishlaydi
+      writeDB(users);
     }
 
     await bot.answerCallbackQuery(query.id, { text: "✅ Tasdiqlandi!" });
@@ -118,7 +132,8 @@ function proceedAfterJoin(userId) {
   const users = readDB();
   const user = users[userId];
 
-  if (!user.processed) {
+  // 🔥 ANTI-CHEAT FIX
+  if (!user.processed && !user.joinedBefore) {
     user.processed = true;
 
     const referrerId = user.referrer;
