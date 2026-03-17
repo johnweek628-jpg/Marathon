@@ -31,17 +31,9 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-const WEBHOOK_URL = `https://marathon-production-983a.up.railway.app/webhook`;
 
 app.listen(PORT, async () => {
   console.log("Server running on", PORT);
-
-  try {
-    
-    console.log("✅ Webhook set successfully");
-  } catch (err) {
-    console.error("❌ Webhook error:", err.message);
-  }
 });
 
 /* -------------------- CHECK MEMBERSHIP -------------------- */
@@ -86,7 +78,6 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
 
 /* -------------------- BUTTON HANDLERS -------------------- */
 bot.on("callback_query", async (query) => {
-
   const userId = query.from.id.toString();
 
   // 🔹 Kanalni tekshirish
@@ -120,7 +111,6 @@ bot.on("callback_query", async (query) => {
 🔐 Sizga bir martalik link beriladi.`
     );
   }
-
 });
 
 /* -------------------- MAIN LOGIC -------------------- */
@@ -128,7 +118,6 @@ function proceedAfterJoin(userId) {
   const users = readDB();
   const user = users[userId];
 
-  // ✅ Referral faqat bir marta hisoblanadi
   if (!user.processed) {
     user.processed = true;
 
@@ -159,11 +148,10 @@ ${PRIVATE_CHANNEL_LINK}`
     writeDB(users);
   }
 
-  // 🔹 Referral link
   const referralLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
   const myCount = users[userId].referrals;
+  const shareText = encodeURIComponent("🎤 3 kunlik speaking marathonga qo‘shiling!");
 
-  // 🔹 MAIN MESSAGE + BUTTON
   bot.sendMessage(
     userId,
 `🎤 3 KUNLIK SPEAKING MARATHON
@@ -183,6 +171,12 @@ ${referralLink}
         inline_keyboard: [
           [
             {
+              text: "📤 Do‘stlarga ulashish",
+              url: `https://t.me/share/url?url=${referralLink}&text=${shareText}`
+            }
+          ],
+          [
+            {
               text: "💰 5000 so'm bilan qo‘shilaman",
               callback_data: "pay_5000"
             }
@@ -194,19 +188,3 @@ ${referralLink}
 }
 
 module.exports = bot;
-reply_markup: {
-  inline_keyboard: [
-    [
-      {
-        text: "📤 Do‘stlarga ulashish",
-        url: `https://t.me/share/url?url=https://t.me/${BOT_USERNAME}?start=${userId}&text=🎤 3 kunlik speaking marathonga qo‘shiling!`
-      }
-    ],
-    [
-      {
-        text: "💰 5000 so'm bilan qo‘shilaman",
-        callback_data: "pay_5000"
-      }
-    ]
-  ]
-}
