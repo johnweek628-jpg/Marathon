@@ -15,28 +15,25 @@ const { joinChannelKeyboard } = require("./keyboard");
 const app = express();
 app.use(express.json());
 
+/* ❗️ ONLY POLLING (WEBHOOKNI BUTUNLAY OLIB TASHLADIK) */
 const bot = new TelegramBot(BOT_TOKEN, {
   polling: true
 });
 
-// 🔹 Webhook endpoint
-app.post("/webhook", (req, res) => {
-  bot.processUpdate(req.body);
-  res.sendStatus(200);
-});
+/* -------------------- SERVER -------------------- */
 
-// 🔹 Health route
 app.get("/", (req, res) => {
   res.send("Bot is running");
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log("Server running on", PORT);
 });
 
 /* -------------------- CHECK MEMBERSHIP -------------------- */
+
 async function isMember(userId) {
   try {
     const member = await bot.getChatMember(MAIN_CHANNEL_ID, userId);
@@ -47,7 +44,9 @@ async function isMember(userId) {
 }
 
 /* -------------------- /START -------------------- */
+
 bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
+
   const userId = msg.from.id.toString();
   const referrerId = match[1];
 
@@ -58,23 +57,17 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
       referrals: 0,
       referrer: referrerId || null,
       rewarded: false,
-      processed: false,
-      joinedBefore: false
+      processed: false
     };
     writeDB(users);
   }
 
   const joined = await isMember(userId);
 
-  if (joined) {
-    users[userId].joinedBefore = true;
-    writeDB(users);
-  }
-
   if (!joined) {
     return bot.sendMessage(
       userId,
-      "Botdan foydalanish uchun, avval kanalga qo‘shilishingiz kerak 👇",
+      "Botdan foydalanish uchun, avval kanalga qo‘shiling 👇",
       joinChannelKeyboard(MAIN_CHANNEL_LINK)
     );
   }
@@ -82,11 +75,14 @@ bot.onText(/\/start(?:\s+(\d+))?/, async (msg, match) => {
   proceedAfterJoin(userId);
 });
 
-/* -------------------- BUTTON HANDLERS -------------------- */
+/* -------------------- CALLBACK -------------------- */
+
 bot.on("callback_query", async (query) => {
+
   const userId = query.from.id.toString();
 
   if (query.data === "check_join") {
+
     const joined = await isMember(userId);
 
     if (!joined) {
@@ -96,59 +92,63 @@ bot.on("callback_query", async (query) => {
       });
     }
 
-    const users = readDB();
-    if (users[userId]) {
-      users[userId].joinedBefore = false;
-      writeDB(users);
-    }
-
     await bot.answerCallbackQuery(query.id, { text: "✅ Tasdiqlandi!" });
     return proceedAfterJoin(userId);
   }
 
   if (query.data === "pay_5000") {
+
     await bot.answerCallbackQuery(query.id);
 
     return bot.sendMessage(
       userId,
-      `💰 Agar 5000 so'm bilan marathonga qo‘shilmoqchi bo‘lsangiz:
+`💰 Agar 5000 so'm bilan marathonga qo‘shilmoqchi bo‘lsangiz:
 
 💳 Karta: 9860100127333845
 
-📩 To‘lov qilgandan keyin screenshotni:
+📩 To‘lovdan keyin screenshotni:
 👉 @jasurbeksielts ga yuboring
 
-🔐 Sizga bir martalik link beriladi.`
+🔐 Sizga private link beriladi.`
     );
   }
 });
 
 /* -------------------- MAIN LOGIC -------------------- */
+
 function proceedAfterJoin(userId) {
+
   const users = readDB();
   const user = users[userId];
 
-  if (!user.processed && !user.joinedBefore) {
+  if (!user) return;
+
+  if (!user.processed) {
+
     user.processed = true;
 
     const referrerId = user.referrer;
 
     if (referrerId && referrerId !== userId && users[referrerId]) {
+
       users[referrerId].referrals += 1;
+
       const count = users[referrerId].referrals;
 
       bot.sendMessage(
         referrerId,
-        `🎉 Yana bir odam sizning havolangiz orqali qo‘shildi!
+`🎉 Yangi referral qo‘shildi!
 👥 Natija: ${count}/3`
       );
 
       if (count >= 3 && !users[referrerId].rewarded) {
+
         users[referrerId].rewarded = true;
 
         bot.sendMessage(
           referrerId,
-          `🎁 Tabriklaymiz! Siz 3 ta odamni taklif qildingiz.
+`🎁 Tabriklaymiz!
+
 🔐 Yopiq kanal havolasi:
 ${PRIVATE_CHANNEL_LINK}`
         );
@@ -161,22 +161,15 @@ ${PRIVATE_CHANNEL_LINK}`
   const referralLink = `https://t.me/${BOT_USERNAME}?start=${userId}`;
   const myCount = users[userId].referrals;
 
-  //  FIXED SHARE TEXT (UNIQUE + FULL TEXT)
   const shareText = encodeURIComponent(
-`🔥 IELTS speakingdan 7.5 sohibi sizni 3 kunlik SPEAKING marafoniga taklif qilyapti!
+`🔥 IELTS speaking marafoniga taklif!
 
-🚀 Qo‘shilib oling !`
+🚀 Qo‘shilib oling!`
   );
 
   bot.sendMessage(
     userId,
-`🎤 3 KUNLIK SPEAKING MARATHON
-
-🔥 Qoidalar:
-
-1. 3 kun davomida speaking topshiriqlar
-2. Har kuni practice
-3. Kirish uchun:
+`🎤 SPEAKING MARATHON
 
 👥 3 ta odam taklif qiling:
 ${referralLink}
@@ -187,13 +180,13 @@ ${referralLink}
         inline_keyboard: [
           [
             {
-              text: "📤 Do‘stlarga ulashish",
-              url: `https://t.me/share/url?url=${referralLink}&text=${shareText}`
+              text: "📤 Ulashish",
+              url: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${shareText}`
             }
           ],
           [
             {
-              text: "💰 5000 so'm bilan qo‘shilaman",
+              text: "💰 5000 so'm bilan kirish",
               callback_data: "pay_5000"
             }
           ]
