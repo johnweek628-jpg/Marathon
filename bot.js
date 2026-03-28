@@ -96,23 +96,7 @@ bot.on("callback_query", async (query) => {
     return proceedAfterJoin(userId);
   }
 
-  if (query.data === "pay_5000") {
-
-    await bot.answerCallbackQuery(query.id);
-
-    return bot.sendMessage(
-      userId,
-`💰 Agar 5000 so'm bilan marathonga qo‘shilmoqchi bo‘lsangiz:
-
-💳 Karta: 9860100127333845
-
-📩 To‘lovdan keyin screenshotni:
-👉 @jasurbeksielts ga yuboring
-
-🔐 Sizga private link beriladi.`
-    );
-  }
-});
+}); // ✅ <-- FAQUAT SHU QATOR QO‘SHILDI
 
 /* -------------------- MAIN LOGIC -------------------- */
 
@@ -182,12 +166,6 @@ ${referralLink}
             {
               text: "📤 Ulashish",
               url: `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${shareText}`
-            }
-          ],
-          [
-            {
-              text: "💰 5000 so'm bilan kirish",
-              callback_data: "pay_5000"
             }
           ]
         ]
